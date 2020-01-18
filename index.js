@@ -10,43 +10,43 @@ const bodyParser = require('body-parser')
 app.use(bodyParser.json())
 
 const sqlite3 = require('sqlite3').verbose()
-
-let imports = require('./blockchain/blockchain')
-const Update = imports.Update
-const Block = imports.Block
-const Blockmanager = imports.Blockmanager
-
 const Log = require('./models/log')
 
+// DATA CREATE
 app.post('/all', (request, response) => {
     const body = request.body
 
     const objHash = SHA256(body.requestObj).toString()
 
-    console.log("Log is created")
-    const log = new Log({
-      previousHash: Log.find({}),
+    // const getPreviousHash = () => {
+    //   // return Log.find().limit(1).({$natural:-1}).then(log => {
+    //   // response.json(log.toJSON()).hash})
+    //   return "ManualHash"
+    // }
+console.log("Initiating Log")
+    const log = {
+      previousHash: "aghhjdbbkskbdkkksksbdb",
       fromAddress: body.fromAddress,
       toAddress: body.toAddress,
-      objHash: body.objHash,
-      token: body.token,
-      timestamp: body.timestamp,
-      
-    })
+      objHash: objHash,
+      timestamp: body.timestamp
+    }
+    console.log("Running calculateHash")
 
+    const calculateHash = (val) => {
+      return SHA256(log.previousHash + log.fromAddress + log.toAddress + log.objHash + log.timestamp+ val).toString()
+    }
+    console.log("calculateHash")
+    let nonce = 0
 
+    const difficulty = 4
+    log.hash = "abcdef"
 
-
-    //
-    // let EHRChain = new Blockmanager()
-    // const update = new Update(body.fromAddress, body.toAddress, objHash, body.token)
-    // EHRChain.addUpdate()
-    // // Mine block
-    // console.log("Start mining")
-    // EHRChain.minePendingUpdates(body.fromAddress)
-    // console.log("End mining")
-
-
+    while (log.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
+      nonce++
+      log.hash = calculateHash(nonce)
+    }
+    console.log("BLOCK MINED: " + log.hash)
 
 
     console.log("Connecting to SQL Database...")
@@ -57,22 +57,14 @@ app.post('/all', (request, response) => {
       console.log('Connected to SQL database.')
     })
 
-    // let query = 'CREATE TABLE greetings(message text)'
-
+    let query = body.requestObject
 
     console.log("Processing Queries")
     // REPLACE THIS CODE
-    db.run(query)
-      .run(`INSERT INTO greetings(message)
-            VALUES('Hi'),
-                  ('Hello'),
-                  ('Welcome')`)
-      .each(`SELECT message FROM greetings`, (err, row) => {
-        if (err){
-          throw err;
-        }
-        console.log(row.message);
-      })
+    db.serialize(() => {
+      // Queries scheduled here will be serialized.
+      db.run(query)
+    })
     // CODE BLOCK END
     console.log("Queries Processed")
 
@@ -84,10 +76,16 @@ app.post('/all', (request, response) => {
       console.log('Close the database connection.')
     })
 
+    console.log(log)
+
+    const mongoLog = new Log(log)
+
     // Saving the log
-    log.save().then(savedLog => {
+    mongoLog.save().then(savedLog => {
       response.json(savedLog.toJSON())
     })
+
+
 })
 
 app.get('/api/logs', (request, response) => {
@@ -108,18 +106,8 @@ app.get('/db', (request, response) => {
   console.log("Processing Queries")
 
   // REPLACE THIS CODE
-  let query = request.body.
+  let query = request.body.requestObj
   db.run(query)
-    .run(`INSERT INTO greetings(message)
-          VALUES('Hi'),
-                ('Hello'),
-                ('Welcome')`)
-    .each(`SELECT message FROM greetings`, (err, row) => {
-      if (err){
-        throw err;
-      }
-      console.log(row.message);
-    })
   // CODE BLOCK END
   console.log("Queries Processed")
 

@@ -14,11 +14,13 @@ mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
   })
 
 const logSchema = new mongoose.Schema({
+  previousHash: String,
   fromAddress: String,
   toAddress: String,
   objHash: String,
   timestamp: Date,
-  signature: String,
+  hash: String,
+
 })
 
 logSchema.set('toJSON', {

@@ -23,3 +23,26 @@ class Update {
     this.signature = sig.toDER('hex')
   }
 }
+
+
+class Block {
+  constructor(timestamp, updates, previousHash = '') {
+    this.previousHash = previousHash
+    this.timestamp = timestamp
+    this.updates = updates
+    this.nonce = 0
+    this.hash = this.calculateHash()
+  }
+
+  calculateHash() {
+    return SHA256(this.previousHash + this.timestamp + JSON.stringify(this.updates) + this.nonce).toString()
+  }
+
+  mineBlock(difficulty) {
+    while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
+      this.nonce++
+      this.hash = this.calculateHash()
+    }
+    console.log("BLOCK MINED: " + this.hash)
+  }
+}

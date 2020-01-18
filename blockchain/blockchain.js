@@ -46,3 +46,45 @@ class Block {
     console.log("BLOCK MINED: " + this.hash)
   }
 }
+
+
+class Blockmanager {
+  constructor() {
+    // DB
+    // do this if no blocks in chain else copy the entire chain and then run
+    this.chain = [this.createGenesisBlock()]
+    this.difficulty = 4
+
+    this.pendingUpdates = []
+    this.miningReward = 100
+  }
+
+  createGenesisBlock() {
+    return // TODO: Enter the manual genesis block here
+  }
+
+  getLatestBlock() {
+    return this.chain[this.chain.length - 1]
+  }
+
+  minePendingUpdates(miningRewardAddress) {
+    const rewardTx = new Update(null, miningRewardAddress, this.miningReward)
+    this.pendingUpdates.push(rewardTx)
+
+    const block = new Block(Date.now(), this.pendingUpdates, this.getLatestBlock().hash)
+    block.mineBlock(this.difficulty)
+
+    // DB
+    this.chain.push(block)
+
+    this.pendingUpdates = []
+  }
+
+  addUpdate(update) {
+    if (!update.fromAddress || !update.toAddress) {
+      throw new Error('Update must include from and to address')
+    }
+
+    this.pendingUpdates.push(update)
+  }
+}

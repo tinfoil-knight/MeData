@@ -95,36 +95,36 @@ class Blockmanager {
   }
 }
 
-// TESTING
-console.log("Initialisation of blockchain")
-let EHRChain = new Blockmanager()
-
-
-
-// Remember that you have to use the patient key and not the hospital key to sign things
-//(Why though? Because only a patient should be allowed to add data)You changed it above.
-// Make a update
-console.log("Creating Update 1")
-const up1 = new Update(myWalletAddress, otherWalletAddress, 'ghf022002be4ea13d279f75ec302b88a2ea467fc85748336', 10)
-//signing of update will only be done by Hospital Key and notpatient key because thats idiotic
-//too much distrust is what you have
-//up1.signUpdate(otherKey)
-//sending the update to an array waiting to be mined
-EHRChain.addUpdate(up1)
-// You'll only be dealing with one patient at a time(But there are multiple receptionists! So.....)
-console.log("Creating Update 2")
-// log store SQL attempt here
-const up2 = new Update(otherWalletAddress, myWalletAddress, 'aa371b46d1dd5234ed46c3d9e9f2e60d44cdd2ee8656bf25', 5)
-// no signing of updates will be done
-//up2.signUpdate(myKey)
-EHRChain.addUpdate(up2)
-// log change value of SQL attempt to passed(or shift this to after mining updates)
-
-// Mine block
-console.log("Start mining")
-EHRChain.minePendingUpdates(myWalletAddress)
-console.log("End mining")
-console.log(JSON.stringify(EHRChain.chain, null, 4))
+// // TESTING
+// console.log("Initialisation of blockchain")
+// let EHRChain = new Blockmanager()
+//
+//
+//
+// // Remember that you have to use the patient key and not the hospital key to sign things
+// //(Why though? Because only a patient should be allowed to add data)You changed it above.
+// // Make a update
+// console.log("Creating Update 1")
+// const up1 = new Update(myWalletAddress, otherWalletAddress, 'ghf022002be4ea13d279f75ec302b88a2ea467fc85748336', 10)
+// //signing of update will only be done by Hospital Key and notpatient key because thats idiotic
+// //too much distrust is what you have
+// //up1.signUpdate(otherKey)
+// //sending the update to an array waiting to be mined
+// EHRChain.addUpdate(up1)
+// // You'll only be dealing with one patient at a time(But there are multiple receptionists! So.....)
+// console.log("Creating Update 2")
+// // log store SQL attempt here
+// const up2 = new Update(otherWalletAddress, myWalletAddress, 'aa371b46d1dd5234ed46c3d9e9f2e60d44cdd2ee8656bf25', 5)
+// // no signing of updates will be done
+// //up2.signUpdate(myKey)
+// EHRChain.addUpdate(up2)
+// // log change value of SQL attempt to passed(or shift this to after mining updates)
+//
+// // Mine block
+// console.log("Start mining")
+// EHRChain.minePendingUpdates(myWalletAddress)
+// console.log("End mining")
+// console.log(JSON.stringify(EHRChain.chain, null, 4))
 module.exports = {
   Update: Update,
   Block: Block,

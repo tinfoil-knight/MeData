@@ -1,0 +1,20 @@
+{
+  "name": "ehr",
+  "version": "1.0.0",
+  "description": "\"Blockchain for EHR\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kunal Kundu",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "crypto-js": "^3.1.9-1",
+    "dotenv": "^8.2.0",
+    "elliptic": "^6.5.2",
+    "express": "^4.17.1",
+    "mongoose": "^5.8.9",
+    "sqlite3": "^4.1.1"
+  }
+}

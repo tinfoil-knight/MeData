@@ -20,7 +20,6 @@ const logSchema = new mongoose.Schema({
   objHash: String,
   timestamp: Date,
   hash: String,
-
 })
 
 logSchema.set('toJSON', {

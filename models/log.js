@@ -6,13 +6,15 @@ const mongoose = require('mongoose')
 console.log('connecting to', url)
 
 mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(result => {
+  .then( () => {
     console.log('connected to MongoDB')
   })
   .catch((error) => {
     console.log('error connecting to MongoDB:', error.message)
   })
 
+// The hash of record object has been stored insted of the original Record
+// to maintain the efficiency of the Blockchain
 const logSchema = new mongoose.Schema({
   previousHash: String,
   fromAddress: String,

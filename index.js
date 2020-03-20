@@ -3,88 +3,119 @@ const mongoose = require('mongoose')
 const express = require('express')
 const app = express()
 
+// For Cross-Origin Requests
 const cors = require('cors')
 app.use(cors())
 
+// Parses POST Requests
 const bodyParser = require('body-parser')
 app.use(bodyParser.json())
 
+// DB: SQLite + MongoDB
 const sqlite3 = require('sqlite3').verbose()
+// Connecting to MongoDB
 const Log = require('./models/log')
 
 
-// DATA CREATE
-app.post('/all', (request, response) => {
-    const body = request.body
+app.post('/db', (req, res) => {
+  // req.body contains fromAddress, toAddress, record
+  // the record key has the relevant medical data as value
+  const body = req.body
 
-    const objHash = SHA256(body.requestObj).toString()
-    Log.findOne({}, {}, { sort: { 'created_at' : -1 } }).then(result => {
+  Log
+    // Finds the last block on the blockchain and places it's hash in the new block
+    .findOne({}, {}, { sort: { 'created_at': -1 } })
+    // Process Everything
+    .then(latestBlock => {
       const log = {
-        previousHash: result.hash,
+        previousHash: latestBlock.hash,
         fromAddress: body.fromAddress,
         toAddress: body.toAddress,
-        objHash: objHash,
-        timestamp: body.timestamp
+        timestamp: Date.now(),
+        // This is to preserve integrity of the Medical Record
+        recordHash: SHA256(body.record).toString()
       }
 
-      const calculateHash = (val) => {
-        return SHA256(result.previousHash + log.fromAddress + log.toAddress + log.objHash + log.timestamp+ val).toString()
-      }
+      // For calculating the hash of the block
 
+
+      // Parameter that helps calculates different hashes for the same block
       let nonce = 0
 
+      // Increasing this parameter leads to an increase in time required to mine the value
       const difficulty = 4
+
+      // Just a Random Value
       log.hash = "testhash"
-      console.log("Calculating Hash")
+
+      console.log("Calculating Hash of the Block")
+      // Keep changing the nonce until the hash of our block starts with enough zero's.
       while (log.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
         nonce++
-        log.hash = calculateHash(nonce)
+        log.hash = SHA256(latestBlock.previousHash + log.fromAddress + log.toAddress + log.recordHash + log.timestamp + nonce).toString()
       }
+
       console.log("Hash Calculated")
       console.log("BLOCK MINED: " + log.hash)
 
-      console.log("Connecting to SQL Database...")
-      let db = new sqlite3.Database('./db/ehr_main.db', (err) => {
+      console.log("Initiating BLock Addition on DB")
+      console.log("Connecting to SQL DB ...")
+
+      // OPEN_READWRITE | OPEN_CREATE is Default
+      let db = new sqlite3.Database('./main.db', (err) => {
         if (err) {
+          console.log("Error in SQL DB connection")
           console.error(err.message)
         }
-        console.log('Connected to SQL database.')
+        console.log('Connected to SQL DB.')
       })
-
-      let query = body.requestObj
 
       console.log("Processing Queries")
-      // REPLACE THIS CODE
+      // Statements here execute sequentially
       db.serialize(() => {
-        // Queries scheduled here will be serialized.
+        // UnSafe
+        // Assuming name of table is records
+
+        let query = 'INSERT INTO records VALUES(' + Object.values(record).join() + ');'
         db.run(query)
       })
-      // CODE BLOCK END
+
       console.log("Queries Processed")
 
       console.log("Closing SQL database")
+
       db.close((err) => {
         if (err) {
           console.error(err.message)
         }
-        console.log('Close the database connection.')
+        console.log('The SQL DB connection has been closed')
       })
 
       console.log(log)
 
+      // Initiates a new log in MongoDB with the specified schema in models
       const mongoLog = new Log(log)
 
-      // Saving the log
-      mongoLog.save().then(savedLog => {
-        response.json(savedLog.toJSON())
-        mongoose.connection.close()
-      })
+      // Saves the log in the remote MongoDB
+      mongoLog.save()
+        .then(savedLog => {
+          res.json(savedLog.toJSON())
+          mongoose.connection.close()
+        })
+        .catch((err) => {
+          // Send all the data that was received back as a JSON object so it can be reviewed and resent
+          console.log("An error has occured while saving the log in MongoDB. Retry?")
+          console.log(err)
+        })
+
     })
 })
 
-app.get('/db', (request, response) => {
+app.get('/db', (req, res) => {
+
   console.log("Connecting to SQL Database...")
-  let db = new sqlite3.Database('./db/ehr_main.db', (err) => {
+
+  let db = new sqlite3.Database('./main.db', (err) => {
     if (err) {
       console.error(err.message)
     }
@@ -93,33 +124,38 @@ app.get('/db', (request, response) => {
 
   console.log("Processing Queries")
 
+  // Requests as /db?q=... get processed
+  // Handle Query here
+  let query = req.body.q
 
-  let query = request.body.requestObj
   db.run(query)
-  console.log("Queries Processed")
 
+  console.log("Queries Processed")
   console.log("Closing SQL database")
+
   db.close((err) => {
     if (err) {
       console.error(err.message)
     }
-    console.log('Close the database connection.')
+    console.log('The SQL DB connection has been closed')
   })
 
 })
 
-app.get('/api/chain', (request, response) => {
-  Log.find({}).then(logs => {
-    response.json(logs.map(log => log.toJSON()))
-  })
-})
+// app.get('/verify', (req, res) => {
+//   Log.find({}).then(logs => {
+//     res.json(logs.map(log => log.toJSON()))
+//   })
+// })
 
-const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: 'unknown endpoint' })
+
+// Handler for Invalid Endpoints
+const unknownEndpoint = (req, res) => {
+  res.status(404).send({ error: 'unknown endpoint' })
 }
 app.use(unknownEndpoint)
 
-const PORT = 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })

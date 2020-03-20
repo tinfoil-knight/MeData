@@ -18,9 +18,25 @@ const sqlite3 = require('sqlite3').verbose()
 const Log = require('./models/log')
 
 
-app.post('/db', (req, res) => {
+// Handles validation
+const { check, validationResult } = require('express-validator');
+
+// POST Request Handler for
+// MongoDB Log Generation and Data Storage on SQL DB
+app.post('/db', [
+  // Validation for POST body
+  check('body').isJSON(),
+  check('record', 'fromAddress', 'toAddress').exists().notEmpty().isString()
+], (req, res) => {
+
+  // Finds the validation errors in request and wraps them in an object
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
   // req.body contains fromAddress, toAddress, record
-  // the record key has the relevant medical data as value
+  // the record key has the relevant EHR data as value
   const body = req.body
 
   Log
@@ -29,37 +45,35 @@ app.post('/db', (req, res) => {
     // Process Everything
     .then(latestBlock => {
       const log = {
-        previousHash: latestBlock.hash,
+        previousHash: latestBlock.blockHash,
         fromAddress: body.fromAddress,
         toAddress: body.toAddress,
         timestamp: Date.now(),
-        // This is to preserve integrity of the Medical Record
+        // This is to preserve integrity of the EHR
         recordHash: SHA256(body.record).toString()
       }
-
-      // For calculating the hash of the block
-
 
       // Parameter that helps calculates different hashes for the same block
       let nonce = 0
 
-      // Increasing this parameter leads to an increase in time required to mine the value
+      // Increasing this parameter leads to an increase in
+      // time required to mine the block
       const difficulty = 4
 
-      // Just a Random Value
-      log.hash = "testhash"
+      // Just a Random Value 
+      log.blockHash = "testhash"
 
       console.log("Calculating Hash of the Block")
       // Keep changing the nonce until the hash of our block starts with enough zero's.
-      while (log.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
+      while (log.blockHash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
         nonce++
-        log.hash = SHA256(latestBlock.previousHash + log.fromAddress + log.toAddress + log.recordHash + log.timestamp + nonce).toString()
+        log.blockHash = SHA256(latestBlock.previousHash + log.fromAddress + log.toAddress + log.recordHash + log.timestamp + nonce).toString()
       }
 
       console.log("Hash Calculated")
-      console.log("BLOCK MINED: " + log.hash)
+      console.log("BLOCK MINED: " + log.blockHash)
 
-      console.log("Initiating BLock Addition on DB")
+      console.log("Initiating Record Addition on SQL DB")
       console.log("Connecting to SQL DB ...")
 
       // OPEN_READWRITE | OPEN_CREATE is Default
@@ -74,15 +88,12 @@ app.post('/db', (req, res) => {
       console.log("Processing Queries")
       // Statements here execute sequentially
       db.serialize(() => {
-        // UnSafe
-        // Assuming name of table is records
-
-        let query = 'INSERT INTO records VALUES(' + Object.values(record).join() + ');'
+        // Note : Prone to SQL injection errors
+        const query = 'INSERT INTO records VALUES(' + Object.values(record).join(,) + ');'
         db.run(query)
       })
 
       console.log("Queries Processed")
-
       console.log("Closing SQL database")
 
       db.close((err) => {
@@ -104,15 +115,22 @@ app.post('/db', (req, res) => {
           mongoose.connection.close()
         })
         .catch((err) => {
-          // Send all the data that was received back as a JSON object so it can be reviewed and resent
           console.log("An error has occured while saving the log in MongoDB. Retry?")
+          // Create a handler for automatic retrial
           console.log(err)
         })
 
     })
 })
 
-app.get('/api', (req, res) => {
+// GET Request Handler for Data API
+app.get('/api', [check('q').isString()], (req, res) => {
+
+  // Finds the validation errors in request and wraps them in an object
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
 
   console.log("Connecting to SQL Database...")
 
@@ -123,14 +141,12 @@ app.get('/api', (req, res) => {
     console.log('Connected to SQL database.')
   })
 
-
-
-  // Requests as /db?q=... get processed
-  // Handle Query here
   console.log("query received as:")
   console.log(req.query.q)
 
   const selectedQuery = req.query.q ? req.query.q : '*'
+
+  // Note : Prone to SQL injection errors
   const query = 'SELECT ' + selectedQuery + ' FROM ehr'
 
   console.log("query passed to db as:")
@@ -139,7 +155,6 @@ app.get('/api', (req, res) => {
 
   db.all(query, (err, rows) => {
     res.send(rows)
-
     console.log(rows)
     console.log(err)
   })
@@ -156,11 +171,12 @@ app.get('/api', (req, res) => {
 
 })
 
-// app.get('/verify', (req, res) => {
-//   Log.find({}).then(logs => {
-//     res.json(logs.map(log => log.toJSON()))
-//   })
-// })
+// GET Request Handler for Blockchain
+app.get('/verify', (req, res) => {
+  Log.find({}).then(logs => {
+    res.json(logs.map(log => log.toJSON()))
+  })
+})
 
 
 // Handler for Invalid Endpoints

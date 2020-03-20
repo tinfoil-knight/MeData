@@ -115,7 +115,7 @@ app.get('/db', (req, res) => {
 
   console.log("Connecting to SQL Database...")
 
-  let db = new sqlite3.Database('./main.db', (err) => {
+  let db = new sqlite3.Database('./db/ehr_main.db', (err) => {
     if (err) {
       console.error(err.message)
     }
@@ -126,9 +126,17 @@ app.get('/db', (req, res) => {
 
   // Requests as /db?q=... get processed
   // Handle Query here
-  let query = req.body.q
-
-  db.run(query)
+  let query = 'SELECT * FROM ehr;'
+  if (req.body.q) {
+    query = req.body.q
+  }
+  
+  console.log(query)
+  db.all(query, (err, rows) => {
+    res.json(rows)
+    console.log(rows)
+    console.log(err)
+  })
 
   console.log("Queries Processed")
   console.log("Closing SQL database")

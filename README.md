@@ -6,3 +6,7 @@
    `MONGODB_URI = <Your connection string goes here>`
 
 ## Process Overview
+
+### API GET Request Handling
+
+![API GET Request Handler](./assets/api_get.png)

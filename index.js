@@ -9,6 +9,7 @@ app.use(cors())
 
 // Parses POST Requests
 const bodyParser = require('body-parser')
+// Just use response.send() now instead of response.json()
 app.use(bodyParser.json())
 
 // DB: SQLite + MongoDB
@@ -99,7 +100,7 @@ app.post('/db', (req, res) => {
       // Saves the log in the remote MongoDB
       mongoLog.save()
         .then(savedLog => {
-          res.json(savedLog.toJSON())
+          res.send(savedLog.toJSON())
           mongoose.connection.close()
         })
         .catch((err) => {
@@ -111,7 +112,7 @@ app.post('/db', (req, res) => {
     })
 })
 
-app.get('/db', (req, res) => {
+app.get('/api', (req, res) => {
 
   console.log("Connecting to SQL Database...")
 
@@ -122,18 +123,23 @@ app.get('/db', (req, res) => {
     console.log('Connected to SQL database.')
   })
 
-  console.log("Processing Queries")
+
 
   // Requests as /db?q=... get processed
   // Handle Query here
-  let query = 'SELECT * FROM ehr;'
-  if (req.body.q) {
-    query = req.body.q
-  }
-  
+  console.log("query received as:")
+  console.log(req.query.q)
+
+  const selectedQuery = req.query.q ? req.query.q : '*'
+  const query = 'SELECT ' + selectedQuery + ' FROM ehr'
+
+  console.log("query passed to db as:")
   console.log(query)
+  console.log("Processing Queries")
+
   db.all(query, (err, rows) => {
-    res.json(rows)
+    res.send(rows)
+
     console.log(rows)
     console.log(err)
   })
@@ -159,6 +165,8 @@ app.get('/db', (req, res) => {
 
 // Handler for Invalid Endpoints
 const unknownEndpoint = (req, res) => {
+  console.log("request received on invalid endpoint")
+  console.log(req)
   res.status(404).send({ error: 'unknown endpoint' })
 }
 app.use(unknownEndpoint)
